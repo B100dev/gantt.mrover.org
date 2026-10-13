@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRover Schedule</title>
+  <meta name="description" content="Shared Gantt chart for the Michigan Mars Rover team.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='2' width='9' height='3' rx='1' fill='%232f6fdb'/><rect x='4' y='7' width='10' height='3' rx='1' fill='%2316a34a'/><rect x='2' y='12' width='7' height='3' rx='1' fill='%23d97706'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <h1 id="title">MRover Schedule</h1>
+
+    <div class="group">
+      <button id="btn-add-root" class="primary-outline" title="Add a top-level task">+ Task</button>
+      <button id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+      <button id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+    </div>
+
+    <div class="group">
+      <input id="search" type="search" placeholder="Filter tasks…" aria-label="Filter tasks">
+      <select id="filter-owner" aria-label="Filter by owner"><option value="">All owners</option></select>
+      <select id="filter-status" aria-label="Filter by status">
+        <option value="">Any status</option>
+        <option value="todo">Not started</option>
+        <option value="in-progress">In progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <div class="seg-ctl" role="group" aria-label="Zoom">
+        <button data-zoom="day">Day</button>
+        <button data-zoom="week">Week</button>
+        <button data-zoom="month">Month</button>
+      </div>
+      <button id="btn-today">Today</button>
+      <button id="btn-expand" title="Expand all">Expand</button>
+      <button id="btn-collapse" title="Collapse all">Collapse</button>
+    </div>
+
+    <div class="group end">
+      <span id="sync-status" class="sync" role="status" aria-live="polite"></span>
+      <button id="btn-reload" title="Load the latest schedule from GitHub" aria-label="Reload">⟳</button>
+      <button id="btn-save" class="primary" disabled title="Save to GitHub (Ctrl+S)">Save to GitHub</button>
+      <button id="btn-settings" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="legend" aria-label="Legend">
+    <span><i class="dot s-todo"></i>Not started</span>
+    <span><i class="dot s-in-progress"></i>In progress</span>
+    <span><i class="dot s-blocked"></i>Blocked</span>
+    <span><i class="dot s-done"></i>Done</span>
+    <span><i class="od-swatch"></i>Overdue</span>
+    <span class="hint">Click a task to edit · drag bars to reschedule · drag bar edges to resize</span>
+  </div>
+
+  <main id="scroller"><div id="gantt"></div></main>
+
+  <dialog id="task-dialog" aria-labelledby="dlg-title">
+    <form id="task-form" method="dialog">
+      <div class="dlg-head">
+        <h2 id="dlg-title">Edit task</h2>
+        <div id="dlg-path" class="muted"></div>
+      </div>
+
+      <label>Name <input name="name" required autocomplete="off"></label>
+      <div class="cols">
+        <label>Owner <input name="owner" list="owner-list" placeholder="e.g. Alex, EHW" autocomplete="off"></label>
+        <label>Status
+          <select name="status">
+            <option value="todo">Not started</option>
+            <option value="in-progress">In progress</option>
+            <option value="blocked">Blocked</option>
+            <option value="done">Done</option>
+          </select>
+        </label>
+      </div>
+      <div class="cols">
+        <label><span id="start-label">Start</span> <input type="date" name="start"></label>
+        <label id="end-field">End <input type="date" name="end"></label>
+      </div>
+      <label class="check"><input type="checkbox" name="milestone"> Milestone (single date, shown as ◆)</label>
+      <p id="rollup-note" class="note" hidden></p>
+      <label>Parent <select name="parent"></select></label>
+      <label>Link <input name="link" type="url" placeholder="https://… (schematic, PR, Drive folder)"></label>
+      <label>Notes <textarea name="notes" rows="3"></textarea></label>
+
+      <fieldset class="tools">
+        <legend>Break down</legend>
+        <div class="row-btns">
+          <button type="button" id="btn-add-sub">+ Subtask</button>
+          <select id="template-select" aria-label="Step template"></select>
+          <button type="button" id="btn-template" title="Add these steps as subtasks, one after another">Add steps</button>
+        </div>
+      </fieldset>
+
+      <div class="dlg-foot">
+        <div class="row-btns">
+          <button type="button" id="btn-up" title="Move up">↑</button>
+          <button type="button" id="btn-down" title="Move down">↓</button>
+          <button type="button" id="btn-duplicate" title="Copy this task and all its subtasks">Duplicate</button>
+          <button type="button" id="btn-delete" class="danger">Delete</button>
+        </div>
+        <div class="row-btns">
+          <button type="button" id="btn-cancel">Cancel</button>
+          <button type="submit" class="primary">Done</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form id="settings-form" method="dialog">
+      <h2 id="settings-title">Settings</h2>
+      <p id="settings-msg" class="note" hidden></p>
+
+      <label>Schedule title <input name="title" autocomplete="off"></label>
+
+      <label>GitHub token
+        <input name="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+      </label>
+      <p class="muted small">
+        Needed only to <b>save</b>. Create a
+        <a id="token-link" target="_blank" rel="noopener">fine-grained personal access token</a>
+        with access to <b id="repo-name"></b> and <b>Contents: Read and write</b>.
+        It's stored only in this browser.
+      </p>
+
+      <label>Your name <input name="name" autocomplete="name" placeholder="Shown in commit messages"></label>
+
+      <div class="row-btns">
+        <button type="button" id="btn-export">Export JSON</button>
+        <label class="file-btn">Import JSON<input type="file" id="import-file" accept="application/json,.json"></label>
+        <a id="history-link" target="_blank" rel="noopener">Change history ↗</a>
+      </div>
+
+      <div class="dlg-foot">
+        <span></span>
+        <div class="row-btns">
+          <button type="button" id="btn-settings-close">Cancel</button>
+          <button type="submit" class="primary">Save settings</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="owner-list"></datalist>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="lib.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

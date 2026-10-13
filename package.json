@@ -1,0 +1,10 @@
+{
+  "name": "gantt.mrover.org",
+  "private": true,
+  "description": "Shared Gantt chart for MRover, hosted on GitHub Pages",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate": "node scripts/validate.js",
+    "start": "python3 -m http.server 8000"
+  }
+}
