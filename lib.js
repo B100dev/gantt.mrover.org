@@ -73,7 +73,7 @@
         p = byId.get(p).parent;
       }
     }
-    const title = typeof src.title === 'string' && src.title.trim() ? src.title : 'MRover Schedule';
+    const title = typeof src.title === 'string' && src.title.trim() ? src.title : 'MRover Gantt';
     return { title, tasks };
   }
 

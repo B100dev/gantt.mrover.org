@@ -59,7 +59,7 @@
   }
 
   const S = {
-    doc: { title: 'MRover Schedule', tasks: [] },
+    doc: { title: 'MRover Gantt', tasks: [] },
     base: null,       // last version known to be on GitHub; used for 3-way merge
     sha: null,
     source: 'none',   // 'github' | 'static' | 'none'
