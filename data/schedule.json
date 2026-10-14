@@ -6,7 +6,7 @@
     {"id":"ra-joint-d","parent":"ra","name":"Joint D","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":""},
     {"id":"ra-jd-bmc","parent":"ra-joint-d","name":"BMC","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":""},
     {"id":"bmc-sch","parent":"ra-jd-bmc","name":"Schematic v2","owner":"","status":"done","start":"2026-09-21","end":"2026-10-02","milestone":false,"link":"","notes":""},
-    {"id":"bmc-sch-rev","parent":"ra-jd-bmc","name":"Schematic review","owner":"","status":"done","start":"2026-10-05","end":"2026-10-07","milestone":false,"link":"","notes":""},
+    {"id":"bmc-sch-rev","parent":"ra-jd-bmc","name":"Schematic review test 123","owner":"","status":"done","start":"2026-10-05","end":"2026-10-07","milestone":false,"link":"","notes":""},
     {"id":"bmc-layout","parent":"ra-jd-bmc","name":"Layout","owner":"","status":"in-progress","start":"2026-10-08","end":"2026-10-21","milestone":false,"link":"","notes":""},
     {"id":"bmc-layout-rev","parent":"ra-jd-bmc","name":"Layout review","owner":"","status":"todo","start":"2026-10-22","end":"2026-10-24","milestone":false,"link":"","notes":""},
     {"id":"bmc-parts","parent":"ra-jd-bmc","name":"Parts ordered","owner":"","status":"todo","start":"2026-10-26","end":"2026-10-27","milestone":false,"link":"","notes":""},
