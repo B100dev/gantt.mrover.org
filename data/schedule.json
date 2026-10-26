@@ -33,6 +33,7 @@
     {"id":"motor-dev-board-testing","parent":"phase-cdr-drive","name":"Motor dev board testing","owner":"Embedded","status":"todo","start":"2026-11-08","end":"2026-12-13","milestone":false,"link":"","notes":"","deps":[],"keyDate":false},
     {"id":"phase-cdr-science","parent":"phase-cdr","name":"Science","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":"","deps":[],"keyDate":false},
     {"id":"science-dev-board-manufacturing","parent":"phase-cdr-science","name":"Science dev board manufacturing","owner":"Embedded","status":"todo","start":"2026-10-11","end":"2026-11-22","milestone":false,"link":"","notes":"","deps":[],"keyDate":false},
+    {"id":"smelf","parent":"phase-cdr","name":"SMELF","owner":"","status":"todo","start":"2026-11-01","end":"2026-11-01","milestone":true,"link":"","notes":"","deps":[],"keyDate":true},
     {"id":"critical-design-review","parent":"phase-cdr","name":"Critical Design Review","owner":"","status":"todo","start":"2026-11-14","end":"2026-11-15","milestone":false,"link":"","notes":"","deps":[],"keyDate":true},
     {"id":"phase-rolling","parent":null,"name":"Rolling Rover","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":"","deps":[],"keyDate":false},
     {"id":"phase-rolling-whole-team","parent":"phase-rolling","name":"Whole team","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":"","deps":[],"keyDate":false},
