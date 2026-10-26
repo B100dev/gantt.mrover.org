@@ -160,7 +160,7 @@ a { color: var(--accent); }
 
 .c-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; }
 .c-owner { width: 96px; flex: none; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-.c-dates { width: 124px; flex: none; padding: 0 8px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.c-dates { width: 132px; flex: none; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
 .c-dates.overdue { color: var(--overdue); }
 
 .g-scale { position: relative; width: var(--tl); flex: none; }
@@ -357,3 +357,31 @@ fieldset.tools legend { font-size: 12px; font-weight: 600; color: var(--muted); 
   #search { width: 120px; }
   .cols { grid-template-columns: 1fr; }
 }
+
+/* ---------- dependencies ---------- */
+
+.g-deps { position: absolute; top: 0; left: var(--left); width: var(--tl); pointer-events: none; z-index: 1; overflow: visible; }
+.g-deps .dep { fill: none; stroke: var(--muted); stroke-width: 1.25; opacity: 0.7; marker-end: url(#arrow); }
+.g-deps .dep.late { stroke: var(--overdue); opacity: 1; stroke-dasharray: 3 2; marker-end: url(#arrow-late); }
+.g-deps .arrow-head { fill: var(--muted); }
+.g-deps .arrow-head.late { fill: var(--overdue); }
+.dep-swatch { width: 16px; height: 0; border-top: 1.25px solid var(--muted); position: relative; }
+.dep-swatch::after { content: ""; position: absolute; right: -1px; top: -4px; border-left: 5px solid var(--muted); border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; }
+.bar-owner { opacity: 0.75; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field .lbl { font-size: 12px; color: var(--muted); font-weight: 600; }
+.field .lbl .muted { font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 9px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; font-size: 12px;
+}
+.chip button { border: none; background: none; min-height: 0; padding: 0 5px; font-size: 14px; line-height: 1; color: var(--muted); border-radius: 10px; }
+.chip button:hover:not(:disabled) { color: var(--blocked); }
+#dep-blocks { margin: 0; }
+
+.toggle-btn[aria-pressed=true] { background: var(--panel-2); border-color: var(--accent); color: var(--accent); }
+.toggle-btn::before { content: "→ "; }
+.toggle-btn[aria-pressed=false] { color: var(--muted); }
+.toggle-btn[aria-pressed=false]::before { content: "⇸ "; }

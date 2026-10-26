@@ -1,5 +1,5 @@
 {
-  "title": "MRover Schedule",
+  "title": "MRover Gantt",
   "tasks": [
     {"id":"rolling-rover","parent":null,"name":"Rolling Rover","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":""},
     {"id":"ra","parent":"rolling-rover","name":"RA (Robotic Arm)","owner":"","status":"todo","start":"","end":"","milestone":false,"link":"","notes":""},

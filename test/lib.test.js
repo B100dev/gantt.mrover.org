@@ -98,3 +98,75 @@ test('shipped schedule.json is valid', () => {
   const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data', 'schedule.json'), 'utf8'));
   assert.deepEqual(L.validate(d), []);
 });
+
+test('enforceDeps pushes a chain of dependents later, keeping durations', () => {
+  const tasks = [
+    task('layout', { start: '2026-10-08', end: '2026-11-21' }),
+    task('review', { start: '2026-10-22', end: '2026-10-24', deps: ['layout'] }),
+    task('fab', { start: '2026-10-26', end: '2026-10-27', deps: ['review'] }),
+    task('parts', { start: '2026-12-15', end: '2026-12-16', deps: ['layout'] }), // already late enough
+  ];
+  const moved = L.enforceDeps(tasks);
+  const get = (id) => tasks.find((t) => t.id === id);
+  assert.deepEqual([get('review').start, get('review').end], ['2026-11-22', '2026-11-24']);
+  assert.deepEqual([get('fab').start, get('fab').end], ['2026-11-25', '2026-11-26']);
+  assert.equal(get('parts').start, '2026-12-15');
+  assert.deepEqual(moved.sort(), ['fab', 'review']);
+});
+
+test('enforceDeps shifts every leaf under a dependent parent and respects parent predecessors', () => {
+  const tasks = [
+    task('bmc'), task('bmc-a', { parent: 'bmc', start: '2026-10-01', end: '2026-10-10' }),
+    task('gear'), task('gear-a', { parent: 'gear', start: '2026-10-01', end: '2026-10-20' }),
+    task('integ'), task('i1', { parent: 'integ', start: '2026-10-05', end: '2026-10-06' }),
+    task('i2', { parent: 'integ', start: '2026-10-07', end: '2026-10-08' }),
+  ];
+  tasks.find((t) => t.id === 'integ').deps = ['bmc', 'gear'];
+  L.enforceDeps(tasks);
+  const get = (id) => tasks.find((t) => t.id === id);
+  assert.equal(get('i1').start, '2026-10-21');
+  assert.equal(get('i2').end, '2026-10-24');
+});
+
+test('wouldCycle / pruneDeps reject loops, including through parents', () => {
+  const tasks = [
+    task('p'), task('a', { parent: 'p', start: '2026-10-01', end: '2026-10-02' }),
+    task('b', { start: '2026-10-05', end: '2026-10-06' }),
+    task('c', { start: '2026-10-07', end: '2026-10-08', deps: ['b'] }),
+  ];
+  const g = L.graph(tasks);
+  assert.equal(L.wouldCycle(g, 'c', 'b'), true);   // b after c after b
+  assert.equal(L.wouldCycle(g, 'p', 'a'), true);   // child after its own parent
+  assert.equal(L.wouldCycle(g, 'a', 'p'), true);   // parent after its own child
+  assert.equal(L.wouldCycle(g, 'b', 'a'), false);
+  // a after c, and b after p: shifting a stretches p, which pushes b, then c, then a again
+  tasks.find((t) => t.id === 'a').deps = ['c'];
+  tasks.find((t) => t.id === 'b').deps = ['p'];
+  assert.equal(L.pruneDeps(tasks), 1);
+  const doc2 = { title: 't', tasks };
+  assert.deepEqual(L.validate(doc2), []);
+  L.enforceDeps(tasks); // terminates
+});
+
+test('validate reports bad dependencies; sanitize drops them', () => {
+  const bad = { title: 'x', tasks: [
+    { id: 'a', deps: ['b'] }, { id: 'b', deps: ['a'] }, { id: 'c', deps: ['nope'] },
+  ] };
+  assert.equal(L.validate(bad).length, 1); // missing task (loop check runs once ids are valid)
+  bad.tasks[2].deps = [];
+  assert.match(L.validate(bad)[0], /loop/);
+  const clean = L.sanitize(bad);
+  assert.deepEqual(L.validate(clean), []);
+  assert.equal(clean.tasks.filter((t) => t.deps.length).length, 1);
+});
+
+test('merge combines dependency edits like any other field', () => {
+  const base = doc(task('a'), task('b'), task('c'));
+  const mine = doc(task('a'), task('b', { deps: ['a'] }), task('c'));
+  const theirs = doc(task('a'), task('b', { name: 'B!' }), task('c', { deps: ['a'] }));
+  const { doc: out, conflicts } = L.merge(base, mine, theirs);
+  assert.deepEqual(out.tasks.find((t) => t.id === 'b').deps, ['a']);
+  assert.equal(out.tasks.find((t) => t.id === 'b').name, 'B!');
+  assert.deepEqual(out.tasks.find((t) => t.id === 'c').deps, ['a']);
+  assert.deepEqual(conflicts, []);
+});
