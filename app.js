@@ -20,17 +20,18 @@
     week: { ppd: 10, top: 'month', bottom: 'week' },
     month: { ppd: 3.5, top: 'year', bottom: 'month' },
   };
-  // Standard breakdowns that can be stamped under any task. [name, days]
+  // Standard breakdowns that can be stamped under any task: [name, days, after].
+  // `after` lists the steps (by index) that must finish first; default is the previous step.
   const TEMPLATES = {
     pcb: {
       label: 'PCB / electronics board',
       steps: [['Schematic', 14], ['Schematic review', 3], ['Layout', 14], ['Layout review', 3],
-        ['Parts ordered', 2], ['Board fab ordered', 2], ['Assembly', 5], ['Bring-up & test', 7]],
+        ['Parts ordered', 7, [1]], ['Board fab ordered', 10, [3]], ['Assembly', 5, [4, 5]], ['Bring-up & test', 7]],
     },
     mech: {
       label: 'Mechanical part / assembly',
-      steps: [['CAD', 14], ['Design review', 3], ['Drawings', 5], ['Stock / parts ordered', 2],
-        ['Manufacturing', 14], ['Assembly', 5], ['Testing', 7]],
+      steps: [['CAD', 14], ['Design review', 3], ['Drawings', 5], ['Stock / parts ordered', 7, [1]],
+        ['Manufacturing', 14, [2, 3]], ['Assembly', 5], ['Testing', 7]],
     },
     software: {
       label: 'Software feature',
@@ -90,6 +91,16 @@
     const d = utc(n);
     const s = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
     return d.getUTCFullYear() === utc(today()).getUTCFullYear() ? s : `${s} '${String(d.getUTCFullYear()).slice(2)}`;
+  }
+
+  // "Jan 10 – 23 '27" style: only mention the year once, and only when it isn't this year.
+  function fmtRange(a, b) {
+    if (a === b) return fmt(a);
+    const da = utc(a), db = utc(b);
+    const y = da.getUTCFullYear();
+    if (y !== db.getUTCFullYear() || y === utc(today()).getUTCFullYear()) return `${fmt(a)} – ${fmt(b)}`;
+    const end = da.getUTCMonth() === db.getUTCMonth() ? db.getUTCDate() : `${MONTHS[db.getUTCMonth()]} ${db.getUTCDate()}`;
+    return `${MONTHS[da.getUTCMonth()]} ${da.getUTCDate()} – ${end} '${String(y).slice(2)}`;
   }
 
   function segments(unit, min, max) {
@@ -261,6 +272,7 @@
     </div>
     <div class="g-body"><div class="g-lines">${lines}</div>`;
 
+    h += depArrows(rows, x, ppd);
     for (const { t, depth } of rows) h += rowHtml(t, depth, x, ppd);
 
     if (!rows.length) {
@@ -274,12 +286,47 @@
     updateSync();
   }
 
+  // Elbow arrows from the end of each dependency to the start of the task that waits on it.
+  function depArrows(rows, x, ppd) {
+    const rowOf = new Map(rows.map((r, i) => [r.t.id, i]));
+    const H = 30, mid = H / 2;
+    let paths = '';
+    for (const { t } of rows) {
+      const r = S.info.get(t.id);
+      if (!t.deps.length || r.start == null) continue;
+      const i2 = rowOf.get(t.id);
+      for (const d of t.deps) {
+        const p = S.info.get(d);
+        if (!p || p.end == null || !rowOf.has(d)) continue;
+        const i1 = rowOf.get(d);
+        const pt = S.tree.byId.get(d);
+        const x1 = pt.milestone && !p.hasKids ? x(p.end) + ppd / 2 + 6 : x(p.end + 1);
+        const x2 = t.milestone && !r.hasKids ? x(r.end) + ppd / 2 - 7 : x(r.start);
+        const y1 = i1 * H + mid, y2 = i2 * H + mid;
+        let path;
+        if (x2 - x1 >= 12) {
+          path = `M${x1} ${y1}H${x1 + 6}V${y2}H${x2}`;
+        } else {
+          const yc = y2 + (y2 > y1 ? -mid : mid);
+          path = `M${x1} ${y1}H${x1 + 6}V${yc}H${x2 - 8}V${y2}H${x2}`;
+        }
+        const late = r.start <= p.end;
+        paths += `<path class="dep${late ? ' late' : ''}" d="${path}"><title>${esc(t.name)} waits on ${esc(pt.name)}${late ? ' (starts too early!)' : ''}</title></path>`;
+      }
+    }
+    if (!paths) return '';
+    return `<svg class="g-deps" width="100%" height="${rows.length * H}" aria-hidden="true">
+      <defs><marker id="arrow" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="arrow-head"/></marker>
+      <marker id="arrow-late" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="arrow-head late"/></marker></defs>
+      ${paths}</svg>`;
+  }
+
   function rowHtml(t, depth, x, ppd) {
     const r = S.info.get(t.id);
     const hasKids = r.hasKids;
     const collapsed = hasKids && S.collapsed.has(t.id) && !filtering();
     let dates = '';
-    if (r.start != null) dates = r.start === r.end ? fmt(r.start) : `${fmt(r.start)} – ${fmt(r.end)}`;
+    if (r.start != null) dates = fmtRange(r.start, r.end);
     const link = safeUrl(t.link);
     return `<div class="row${hasKids ? ' is-parent' : ''}${depth === 0 ? ' is-root' : ''}" data-id="${esc(t.id)}" style="--depth:${depth}">
       <div class="cell-left">
@@ -305,7 +352,7 @@
     const days = r.end - r.start + 1;
     const tip = esc(`${t.name}\n${r.start === r.end ? fmt(r.start) : `${fmt(r.start)} – ${fmt(r.end)} (${days} days)`}`
       + `\n${STATUS_LABELS[r.status]}${t.owner ? ` · ${t.owner}` : ''}${r.overdue ? '\nOverdue' : ''}`);
-    const label = `<span class="bar-label">${esc(t.name)}</span>`;
+    const label = `<span class="bar-label">${esc(t.name)}${t.owner && !r.hasKids ? ` <span class="bar-owner">· ${esc(t.owner)}</span>` : ''}</span>`;
     const od = r.overdue ? ' overdue' : '';
     if (r.hasKids) {
       const pct = r.leaves ? Math.round((r.done / r.leaves) * 100) : 0;
@@ -370,7 +417,13 @@
   function mutate(fn) {
     const before = JSON.stringify(S.doc);
     fn();
+    L.pruneDeps(S.doc.tasks); // safety net, e.g. after re-parenting
+    const moved = L.enforceDeps(S.doc.tasks);
     if (JSON.stringify(S.doc) === before) return false;
+    if (moved.length) {
+      const names = moved.map((id) => S.doc.tasks.find((t) => t.id === id).name);
+      toast(`Rescheduled to keep dependencies in order: ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` +${names.length - 3} more` : ''}`);
+    }
     S.undo.push(before);
     if (S.undo.length > 100) S.undo.shift();
     S.redo = [];
@@ -447,6 +500,7 @@
   function deleteTask(id) {
     const gone = new Set([id, ...descendants(id)]);
     S.doc.tasks = S.doc.tasks.filter((t) => !gone.has(t.id));
+    for (const t of S.doc.tasks) t.deps = t.deps.filter((d) => !gone.has(d));
   }
 
   function duplicateTask(id) {
@@ -459,6 +513,7 @@
       t.id = map.get(old);
       if (old === id) t.name += ' (copy)';
       else t.parent = map.get(t.parent);
+      t.deps = t.deps.map((d) => map.get(d) || d); // links inside the copy point at the copies
       return t;
     });
     const idx = S.doc.tasks.findIndex((t) => t.id === id);
@@ -486,14 +541,30 @@
     if (kids.length && pr.end != null) d = pr.end + 1;
     else if (pr.start != null) d = pr.start;
     const ids = taskIds();
-    for (const [name, dur] of tpl.steps) {
+    const made = [];
+    tpl.steps.forEach(([name, dur, after], i) => {
       const id = L.newId(ids);
       ids.add(id);
-      S.doc.tasks.push(L.normTask({ id, parent: parentId, name, start: L.fromDay(d), end: L.fromDay(d + dur - 1) }));
-      d += dur;
-    }
+      const preds = (after || (i ? [i - 1] : [])).map((j) => made[j]);
+      const start = preds.length ? Math.max(...preds.map((p) => p.endDay)) + 1 : d;
+      S.doc.tasks.push(L.normTask({
+        id, parent: parentId, name, start: L.fromDay(start), end: L.fromDay(start + dur - 1), deps: preds.map((p) => p.id),
+      }));
+      made.push({ id, endDay: start + dur - 1 });
+    });
     S.collapsed.delete(parentId);
     persistCollapsed();
+  }
+
+  // Make each subtask wait for the one above it (keeps any links already there).
+  function chainChildren(parentId) {
+    const kids = kidsOf(parentId);
+    for (let i = 1; i < kids.length; i++) {
+      const prev = kids[i - 1].id;
+      if (kids[i].deps.includes(prev)) continue;
+      if (L.wouldCycle(L.graph(S.doc.tasks), prev, kids[i].id)) continue;
+      kids[i].deps.push(prev);
+    }
   }
 
   function persistCollapsed() {
@@ -508,7 +579,7 @@
   function openEditor(id, isNew) {
     const t = S.tree.byId.get(id);
     if (!t) return;
-    S.editing = { id, isNew: !!isNew };
+    S.editing = { id, isNew: !!isNew, deps: [...t.deps] };
     const r = S.info.get(id);
     const f = form.elements;
     const banned = new Set([id, ...descendants(id)]);
@@ -541,6 +612,12 @@
       : '';
     syncMilestoneField();
 
+    renderDepEditor();
+    const blocks = S.doc.tasks.filter((x) => x.deps.includes(id)).map((x) => x.name || 'Untitled');
+    $('#dep-blocks').textContent = blocks.length ? `Blocks: ${blocks.join(', ')}` : '';
+    $('#dep-blocks').hidden = !blocks.length;
+    $('#btn-chain').disabled = kidsOf(id).length < 2;
+
     const sibs = kidsOf(t.parent || '');
     $('#btn-up').disabled = sibs[0] === t;
     $('#btn-down').disabled = sibs[sibs.length - 1] === t;
@@ -551,6 +628,44 @@
     f.name.focus();
     if (isNew) f.name.select();
   }
+
+  function renderDepEditor() {
+    const { id, deps } = S.editing;
+    $('#dep-chips').innerHTML = deps.length
+      ? deps.map((d) => {
+        const p = S.tree.byId.get(d);
+        const pr = S.info.get(d);
+        const when = pr && pr.end != null ? ` · ends ${fmt(pr.end)}` : '';
+        return `<span class="chip" title="${esc(pathOf(p) + ' → ' + p.name)}">${esc(p.name || 'Untitled')}<span class="muted">${when}</span>`
+          + `<button type="button" data-dep-remove="${esc(d)}" aria-label="Remove ${esc(p.name)}">×</button></span>`;
+      }).join('')
+      : '<span class="muted small">Nothing. This task can start any time.</span>';
+
+    // Offer only tasks that wouldn't create a loop given the links picked so far.
+    const g = L.graph(S.doc.tasks.map((x) => (x.id === id ? { ...x, deps } : x)));
+    let opts = '<option value="">+ Add a task this waits for…</option>';
+    const walk = (pid, depth) => {
+      for (const k of kidsOf(pid)) {
+        const ok = !deps.includes(k.id) && !L.wouldCycle(g, k.id, id);
+        if (ok) opts += `<option value="${esc(k.id)}">${'\u00a0\u00a0'.repeat(depth)}${esc(k.name || 'Untitled')}</option>`;
+        else if (k.id !== id) opts += `<option disabled>${'\u00a0\u00a0'.repeat(depth)}${esc(k.name || 'Untitled')}</option>`;
+        walk(k.id, depth + 1);
+      }
+    };
+    walk('', 0);
+    $('#dep-add').innerHTML = opts;
+  }
+
+  $('#dep-add').addEventListener('change', (e) => {
+    if (e.target.value) S.editing.deps.push(e.target.value);
+    renderDepEditor();
+  });
+  $('#dep-chips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-dep-remove]');
+    if (!b) return;
+    S.editing.deps = S.editing.deps.filter((d) => d !== b.dataset.depRemove);
+    renderDepEditor();
+  });
 
   function pathOf(t) {
     const parts = [];
@@ -571,6 +686,7 @@
     t.owner = f.owner.value.trim();
     t.link = f.link.value.trim();
     t.notes = f.notes.value;
+    t.deps = [...S.editing.deps];
     if (!S.info.get(t.id).hasKids) {
       t.status = f.status.value;
       t.milestone = f.milestone.checked;
@@ -624,6 +740,9 @@
     const key = $('#template-select').value;
     commitWith((id) => { applyTemplate(id, key); return null; });
     toast(`Added ${TEMPLATES[key].label} steps`);
+  });
+  $('#btn-chain').addEventListener('click', () => {
+    commitWith((id) => { chainChildren(id); return { id }; });
   });
   $('#btn-duplicate').addEventListener('click', () => commitWith((id) => ({ id: duplicateTask(id) })));
   $('#btn-delete').addEventListener('click', () => {

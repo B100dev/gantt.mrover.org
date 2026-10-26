@@ -55,6 +55,7 @@
     <span><i class="dot s-blocked"></i>Blocked</span>
     <span><i class="dot s-done"></i>Done</span>
     <span><i class="od-swatch"></i>Overdue</span>
+    <span><i class="dep-swatch"></i>Waits for</span>
     <span class="hint">Click a task to edit · drag bars to reschedule · drag bar edges to resize</span>
   </div>
 
@@ -86,6 +87,12 @@
       <label class="check"><input type="checkbox" name="milestone"> Milestone (single date, shown as ◆)</label>
       <p id="rollup-note" class="note" hidden></p>
       <label>Parent <select name="parent"></select></label>
+      <div class="field">
+        <span class="lbl">Waits for <span class="muted">(starts after these finish; moves later automatically if they slip)</span></span>
+        <div id="dep-chips" class="chips"></div>
+        <select id="dep-add" aria-label="Add a task this one waits for"></select>
+        <p id="dep-blocks" class="muted small" hidden></p>
+      </div>
       <label>Link <input name="link" type="url" placeholder="https://… (schematic, PR, Drive folder)"></label>
       <label>Notes <textarea name="notes" rows="3"></textarea></label>
 
@@ -94,7 +101,10 @@
         <div class="row-btns">
           <button type="button" id="btn-add-sub">+ Subtask</button>
           <select id="template-select" aria-label="Step template"></select>
-          <button type="button" id="btn-template" title="Add these steps as subtasks, one after another">Add steps</button>
+          <button type="button" id="btn-template" title="Add these steps as linked subtasks">Add steps</button>
+        </div>
+        <div class="row-btns">
+          <button type="button" id="btn-chain" title="Make each subtask wait for the one above it">Chain subtasks in order</button>
         </div>
       </fieldset>
 
