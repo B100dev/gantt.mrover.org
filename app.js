@@ -94,6 +94,13 @@
     return d.getUTCFullYear() === utc(today()).getUTCFullYear() ? s : `${s} '${String(d.getUTCFullYear()).slice(2)}`;
   }
 
+  // Header labels for key dates: "Preliminary Design Review" -> "PDR", "University Rover Challenge (+travel)" -> "URC".
+  function shortName(name) {
+    const words = name.replace(/\(.*?\)/g, '').trim().split(/\s+/);
+    if (words.length >= 3 && words.every((w) => /^[A-Z]/.test(w))) return words.map((w) => w[0]).join('');
+    return name.length > 22 ? name.slice(0, 21) + '…' : name;
+  }
+
   // "Jan 10 – 23 '27" style: only mention the year once, and only when it isn't this year.
   function fmtRange(a, b) {
     if (a === b) return fmt(a);
@@ -264,12 +271,39 @@
       const wk = z.bottom === 'day' && weekday(s.d) >= 5 ? `<div class="weekend-bg" style="left:${x(s.start)}px;width:${ppd}px"></div>` : '';
       return `${wk}<div class="vline${major}" style="left:${x(s.start)}px"></div>`;
     }).join('');
+    // Key dates (reviews, Rolling Rover, ...) get a line or band down the whole chart.
+    const tags = [];
+    for (const t of S.doc.tasks) {
+      const r = S.info.get(t.id);
+      if (!t.keyDate || !r || r.start == null) continue;
+      const when = fmtRange(r.start, r.end);
+      const tip = esc(`${t.name} · ${when}`);
+      if (r.start === r.end) {
+        lines += `<div class="key-line" style="left:${x(r.start) + ppd / 2}px" title="${tip}"></div>`;
+      } else {
+        lines += `<div class="key-band" style="left:${x(r.start)}px;width:${(r.end - r.start + 1) * ppd}px" title="${tip}"></div>`;
+      }
+      const label = shortName(t.name);
+      const single = r.start === r.end;
+      const w = label.length * 6.5 + 12;
+      const left = single ? x(r.start) + ppd / 2 - w / 2 : x(r.start);
+      tags.push({ left, w, label, tip, single });
+    }
+    // Stack tags that would overlap onto a second line.
+    tags.sort((a, b) => a.left - b.left);
+    const rowEnds = [-Infinity, -Infinity];
+    let keyTags = '';
+    for (const g of tags) {
+      const lane = g.left >= rowEnds[0] + 4 ? 0 : 1;
+      rowEnds[lane] = Math.max(rowEnds[lane], g.left + g.w);
+      keyTags += `<div class="key-tag${g.single ? '' : ' band'}${lane ? ' lane2' : ''}" style="left:${g.single ? g.left + g.w / 2 : g.left}px" title="${g.tip}">${esc(g.label)}</div>`;
+    }
     lines += `<div class="today" style="left:${x(now) + ppd / 2}px" title="Today"></div>`;
 
     let h = `<div class="g-head">
       <div class="g-corner"><span class="c-name">Task</span><span class="c-owner">Owner</span><span class="c-dates">Dates</span></div>
       <div class="g-scale"><div class="tier top">${tier(z.top, 'top')}</div><div class="tier bottom">${tier(z.bottom, 'bottom')}</div>
-      <div class="today-tag" style="left:${x(now) + ppd / 2}px">Today</div></div>
+      ${keyTags}<div class="today-tag" style="left:${x(now) + ppd / 2}px">Today</div></div>
     </div>
     <div class="g-body"><div class="g-lines">${lines}</div>`;
 
@@ -281,7 +315,7 @@
         ? 'No tasks match the current filter.'
         : 'No tasks yet. Use <b>+ Task</b> to add the first one (e.g. "Rolling Rover").'}</div>`;
     }
-    h += '</div>';
+    h += '<div class="row filler"><div class="cell-left"></div></div></div>';
     gantt.innerHTML = h;
     renderFilters();
     updateSync();
@@ -601,6 +635,7 @@
     f.link.value = t.link;
     f.notes.value = t.notes;
     f.milestone.checked = t.milestone;
+    f.keyDate.checked = t.keyDate;
     f.status.value = r.status;
     f.start.value = r.start != null ? L.fromDay(r.start) : '';
     f.end.value = r.end != null ? L.fromDay(r.end) : '';
@@ -687,6 +722,7 @@
     t.owner = f.owner.value.trim();
     t.link = f.link.value.trim();
     t.notes = f.notes.value;
+    t.keyDate = f.keyDate.checked;
     t.deps = [...S.editing.deps];
     if (!S.info.get(t.id).hasKids) {
       t.status = f.status.value;

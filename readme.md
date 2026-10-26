@@ -25,6 +25,9 @@ so you get full history and blame for free.
   keeping each task's length. Nothing is ever pulled earlier on its own. A task can wait for a whole group
   (e.g. *Joint D integration* waits for *BMC* and *Gearbox*). **Chain subtasks in order** links each subtask to the one above it in one click.
   Links that would make a task wait on itself, its parent, or its own subtasks aren't offered.
+- **Key dates:** tick **Key date** in a task's editor to draw a dashed purple line (or a shaded band for multi-day events)
+  down the whole chart, with a label in the header. Long names are shortened in the header ("Preliminary Design Review" → "PDR").
+  PDR, CDR, Rolling Rover, SAR, Rover Reveal and URC are marked already.
 - Parent rows roll up automatically: their dates span their subtasks, the dark fill shows the fraction
   of steps done, and the status becomes blocked or in progress if any child is.
 - Overdue tasks get a dashed red outline. Filter by text, owner or status from the toolbar.
@@ -66,7 +69,7 @@ If the repo moves (e.g. into an MRover org), update `CONFIG` at the top of [`app
 `data/schedule.json` has one task per line:
 
 ```json
-{"id":"bmc-layout-rev","parent":"ra-jd-bmc","name":"Layout review","owner":"","status":"todo","start":"2026-10-22","end":"2026-10-24","milestone":false,"link":"","notes":"","deps":["bmc-layout"]}
+{"id":"bmc-layout-rev","parent":"ra-jd-bmc","name":"Layout review","owner":"","status":"todo","start":"2026-10-22","end":"2026-10-24","milestone":false,"link":"","notes":"","deps":["bmc-layout"],"keyDate":false}
 ```
 
 `status` is one of `todo`, `in-progress`, `blocked`, `done`. Dates are `YYYY-MM-DD`, with the end date included.
