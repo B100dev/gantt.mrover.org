@@ -20,7 +20,7 @@ so you get full history and blame for free.
   - *Mechanical part*: CAD → Design review → Drawings → Manufacturing → Assembly → Testing, with stock ordered after the design review
   - *Software feature*: Design → Implementation → Code review → Sim testing → On-rover testing
 - **Duplicate** copies a task with all its subtasks (e.g. make Joint E's BMC from Joint D's).
-- **Dependencies:** in a task's editor, **Waits for** lists the tasks that must finish first. Arrows show these links on the chart.
+- **Dependencies:** in a task's editor, **Waits for** lists the tasks that must finish first. Arrows show these links on the chart (the **Arrows** button in the toolbar hides or shows them; your choice is remembered in your browser).
   When something slips (e.g. you drag *Layout* a week later), everything waiting on it moves later automatically,
   keeping each task's length. Nothing is ever pulled earlier on its own. A task can wait for a whole group
   (e.g. *Joint D integration* waits for *BMC* and *Gearbox*). **Chain subtasks in order** links each subtask to the one above it in one click.

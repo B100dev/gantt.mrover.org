@@ -67,6 +67,7 @@
     dirty: false,
     saving: false,
     zoom: ZOOMS[store.get('zoom')] ? store.get('zoom') : 'week',
+    showArrows: store.get('arrows') !== 'off',
     collapsed: readCollapsed(),
     filters: { q: '', owner: '', status: '' },
     undo: [],
@@ -272,7 +273,7 @@
     </div>
     <div class="g-body"><div class="g-lines">${lines}</div>`;
 
-    h += depArrows(rows, x, ppd);
+    if (S.showArrows) h += depArrows(rows, x, ppd);
     for (const { t, depth } of rows) h += rowHtml(t, depth, x, ppd);
 
     if (!rows.length) {
@@ -1051,6 +1052,14 @@
     S.undo = []; S.redo = [];
     render();
     toast('Loaded latest from GitHub');
+  });
+  const arrowsBtn = $('#btn-arrows');
+  arrowsBtn.setAttribute('aria-pressed', String(S.showArrows));
+  arrowsBtn.addEventListener('click', () => {
+    S.showArrows = !S.showArrows;
+    store.set('arrows', S.showArrows ? null : 'off');
+    arrowsBtn.setAttribute('aria-pressed', String(S.showArrows));
+    render();
   });
   $('#btn-expand').addEventListener('click', () => { S.collapsed.clear(); persistCollapsed(); render(); });
   $('#btn-collapse').addEventListener('click', () => {

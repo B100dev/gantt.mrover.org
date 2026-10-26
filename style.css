@@ -380,3 +380,8 @@ fieldset.tools legend { font-size: 12px; font-weight: 600; color: var(--muted); 
 .chip button { border: none; background: none; min-height: 0; padding: 0 5px; font-size: 14px; line-height: 1; color: var(--muted); border-radius: 10px; }
 .chip button:hover:not(:disabled) { color: var(--blocked); }
 #dep-blocks { margin: 0; }
+
+.toggle-btn[aria-pressed=true] { background: var(--panel-2); border-color: var(--accent); color: var(--accent); }
+.toggle-btn::before { content: "→ "; }
+.toggle-btn[aria-pressed=false] { color: var(--muted); }
+.toggle-btn[aria-pressed=false]::before { content: "⇸ "; }
