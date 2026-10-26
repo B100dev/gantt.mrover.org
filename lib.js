@@ -11,7 +11,7 @@
   const STATUSES = ['todo', 'in-progress', 'blocked', 'done'];
   const TASK_DEFAULTS = {
     id: '', parent: null, name: '', owner: '', status: 'todo',
-    start: '', end: '', milestone: false, link: '', notes: '', deps: [],
+    start: '', end: '', milestone: false, link: '', notes: '', deps: [], keyDate: false,
   };
   const TASK_KEYS = Object.keys(TASK_DEFAULTS);
   const STRING_KEYS = ['id', 'name', 'owner', 'start', 'end', 'link', 'notes'];
@@ -43,6 +43,7 @@
     for (const k of STRING_KEYS) o[k] = o[k] == null ? '' : String(o[k]);
     o.parent = o.parent ? String(o.parent) : null;
     o.milestone = !!o.milestone;
+    o.keyDate = !!o.keyDate;
     if (!STATUSES.includes(o.status)) o.status = 'todo';
     o.deps = Array.isArray(o.deps) ? [...new Set(o.deps.filter((d) => d && typeof d === 'string'))] : [];
     return o;

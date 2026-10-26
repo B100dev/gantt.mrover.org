@@ -170,3 +170,14 @@ test('merge combines dependency edits like any other field', () => {
   assert.deepEqual(out.tasks.find((t) => t.id === 'c').deps, ['a']);
   assert.deepEqual(conflicts, []);
 });
+
+test('keyDate defaults to false and survives serialize + merge', () => {
+  assert.equal(task('a').keyDate, false);
+  const base = doc(task('a'), task('b'));
+  const mine = doc(task('a', { keyDate: true }), task('b'));
+  const theirs = doc(task('a', { name: 'PDR' }), task('b'));
+  const out = L.merge(base, mine, theirs).doc;
+  assert.equal(out.tasks[0].keyDate, true);
+  assert.equal(out.tasks[0].name, 'PDR');
+  assert.equal(JSON.parse(L.serialize(out)).tasks[0].keyDate, true);
+});
